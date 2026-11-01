@@ -1,0 +1,4 @@
+.env
+__pycache__/
+*.pyc
+smsapi.py   # eğer smsapi.py'yi public repoya koymak istemiyorsan

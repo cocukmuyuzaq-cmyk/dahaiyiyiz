@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZENIX | Gelişmiş Sorgu Paneli</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #030305;
+            --panel: rgba(20, 25, 35, 0.6);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #e2e8f0;
+            --accent: #00f0ff;
+            --accent-glow: rgba(0, 240, 255, 0.5);
+            --danger: #ff3366;
+            --success: #00ff88;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(255, 51, 102, 0.05), transparent 30%),
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #snow-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .snowflake {
+            position: absolute; top: -10px; color: #fff; opacity: 0.6;
+            animation: fall linear infinite;
+        }
+        @keyframes fall { to { transform: translateY(105vh); } }
+        .sidebar {
+            width: 300px; background: rgba(10, 12, 18, 0.85);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; padding: 20px 0;
+            overflow-y: auto; box-shadow: 5px 0 30px rgba(0,0,0,0.8); z-index: 10;
+        }
+        .sidebar h2 {
+            padding: 0 20px 15px; font-size: 22px; font-weight: 800; color: #fff;
+            border-bottom: 1px solid var(--border); margin-bottom: 15px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .sidebar h2 i { color: var(--accent); text-shadow: 0 0 15px var(--accent-glow); }
+        .menu-category {
+            padding: 15px 20px 5px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 1.5px; color: #64748b;
+        }
+        .menu-item {
+            padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 600;
+            color: #94a3b8; transition: all 0.3s ease; border-left: 3px solid transparent;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .menu-item:hover { background-color: rgba(0, 240, 255, 0.03); color: #fff; padding-left: 25px; }
+        .menu-item.active {
+            background-color: rgba(0, 240, 255, 0.08); color: var(--accent);
+            border-left-color: var(--accent); box-shadow: inset 5px 0 20px -5px var(--accent-glow);
+        }
+        .menu-item i { width: 20px; text-align: center; }
+        .main {
+            flex: 1; display: flex; flex-direction: column; padding: 40px;
+            overflow-y: auto; position: relative; z-index: 5;
+        }
+        .header-title {
+            font-size: 32px; font-weight: 800; margin-bottom: 30px;
+            display: flex; align-items: center; gap: 15px; color: #fff; letter-spacing: -0.5px;
+        }
+        .header-title i { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
+        .search-container {
+            background: var(--panel); backdrop-filter: blur(20px);
+            border: 1px solid var(--border); border-radius: 16px; padding: 30px;
+            margin-bottom: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            position: relative; overflow: hidden;
+        }
+        .search-container::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.5;
+        }
+        .search-box { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-wrapper { flex: 1; position: relative; }
+        .input-wrapper i {
+            position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+            color: #64748b; font-size: 16px; transition: 0.3s;
+        }
+        .search-box input[type="text"], .search-box input[type="number"], .search-box select {
+            width: 100%; padding: 18px 18px 18px 50px; background-color: rgba(0,0,0,0.4);
+            border: 1px solid var(--border); border-radius: 10px; color: #fff;
+            font-size: 16px; font-family: 'JetBrains Mono', monospace; outline: none; transition: all 0.3s;
+        }
+        .search-box input:focus, .search-box select:focus {
+            border-color: var(--accent); background-color: rgba(0, 240, 255, 0.05);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+        }
+        .search-box input[type="number"] { width: 120px; padding-left: 20px; }
+        .search-box select { width: 180px; padding-left: 20px; cursor: pointer; }
+        .search-box button {
+            padding: 0 40px; background: linear-gradient(135deg, #00f0ff, #0077ff);
+            color: #000; border: none; border-radius: 10px; font-weight: 800;
+            cursor: pointer; font-size: 16px; font-family: 'Outfit', sans-serif;
+            transition: all 0.3s; display: flex; align-items: center; gap: 10px;
+            min-width: 150px; justify-content: center;
+        }
+        .search-box button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--accent-glow); }
+        .search-box button:disabled {
+            background: var(--border); color: #64748b; cursor: not-allowed;
+            transform: none; box-shadow: none;
+        }
+        .result-container {
+            background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+            border-radius: 16px; padding: 30px; flex: 1; overflow: auto;
+            font-family: 'JetBrains Mono', monospace; font-size: 14px;
+            color: #a5d6ff; white-space: pre-wrap; display: none;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+        }
+        .result-container.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .error { color: var(--danger); text-align: center; margin-top: 15px; font-size: 15px; font-weight: 600; text-shadow: 0 0 10px rgba(255,51,102,0.3); }
+        .success { color: var(--success); text-align: center; margin-top: 15px; font-size: 13px; font-weight: 600; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+        .progress-bar {
+            margin-top: 15px; height: 6px; background: rgba(255,255,255,0.05);
+            border-radius: 3px; overflow: hidden; display: none;
+        }
+        .progress-bar.active { display: block; }
+        .progress-bar-inner {
+            height: 100%; background: linear-gradient(90deg, #00f0ff, #0077ff);
+            width: 0%; transition: width 0.3s; box-shadow: 0 0 15px var(--accent-glow);
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    </style>
+</head>
+<body>
+    <div id="snow-container"></div>
+
+    <div class="sidebar">
+        <h2><i class="fa-solid fa-cube"></i> ZENIX</h2>
+
+        <div class="menu-category">PanelAbi (TC/GSM)</div>
+        <div class="menu-item active" data-type="tc" data-placeholder="TC Kimlik No (11 Hane)" data-btn="Sorgula"><i class="fa-solid fa-id-card"></i> TC Sorgulama</div>
+        <div class="menu-item" data-type="tcpro" data-placeholder="TC Kimlik No (11 Hane)" data-btn="Sorgula"><i class="fa-solid fa-id-card-clip"></i> TC PRO</div>
+        <div class="menu-item" data-type="adsoyad" data-placeholder="Ad Soyad (Örn: GAZAL ÖZDEMİR)" data-btn="Sorgula"><i class="fa-solid fa-user"></i> Ad Soyad</div>
+        <div class="menu-item" data-type="aile" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-users"></i> Aile Sorgu</div>
+        <div class="menu-item" data-type="sulale" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-sitemap"></i> Sülale Sorgu</div>
+        <div class="menu-item" data-type="tcgsm" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-arrow-right-arrow-left"></i> TC -> GSM</div>
+        <div class="menu-item" data-type="gsmtc" data-placeholder="GSM No (Örn: 5551234567)" data-btn="Sorgula"><i class="fa-solid fa-arrow-right-arrow-left"></i> GSM -> TC</div>
+        <div class="menu-item" data-type="eokulno" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-school"></i> E-Okul Sorgu</div>
+        <div class="menu-item" data-type="adres" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-location-dot"></i> Adres Sorgu</div>
+        <div class="menu-item" data-type="isyeri" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-briefcase"></i> İş Yeri Sorgu</div>
+        <div class="menu-item" data-type="sgk" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-hospital"></i> SGK Sorgu</div>
+        <div class="menu-item" data-type="log" data-placeholder="Web Sitesi (Örn: example.com)" data-btn="Sorgula"><i class="fa-solid fa-list"></i> URL Log</div>
+        <div class="menu-item" data-type="adililce" data-placeholder="Ad İl İlçe (Örn: Ali İstanbul Kadıköy)" data-btn="Sorgula"><i class="fa-solid fa-magnifying-glass-location"></i> Ad İl İlçe</div>
+
+        <div class="menu-category">Solidark (Fotoğraf)</div>
+        <div class="menu-item" data-type="vesika" data-placeholder="TC Kimlik No" data-btn="Sorgula"><i class="fa-solid fa-image"></i> Vesika (Fotoğraf)</div>
+
+        <div class="menu-category">Wazely (Genel)</div>
+        <div class="menu-item" data-type="bedrock" data-placeholder="Minecraft Sunucu IP" data-btn="Sorgula"><i class="fa-brands fa-minecraft"></i> MC Bedrock</div>
+        <div class="menu-item" data-type="ccgen" data-placeholder="Boş bırakın" data-btn="Sorgula"><i class="fa-solid fa-credit-card"></i> CC Gen</div>
+        <div class="menu-item" data-type="cccheck" data-placeholder="Kart Numarası" data-btn="Sorgula"><i class="fa-solid fa-check-to-slot"></i> CC Check</div>
+        <div class="menu-item" data-type="trlog" data-placeholder="Site Adı (Örn: sahibinden)" data-btn="Sorgula"><i class="fa-solid fa-list"></i> TR Log</div>
+        <div class="menu-item" data-type="eczane" data-placeholder="İlçe Adı (Örn: Kadıköy)" data-btn="Sorgula"><i class="fa-solid fa-prescription-bottle-medical"></i> Eczane</div>
+        <div class="menu-item" data-type="ipinfo" data-placeholder="IP Adresi" data-btn="Sorgula"><i class="fa-solid fa-network-wired"></i> IP Bilgi</div>
+        <div class="menu-item" data-type="dns" data-placeholder="Domain (Örn: google.com)" data-btn="Sorgula"><i class="fa-solid fa-server"></i> DNS Sorgu</div>
+        <div class="menu-item" data-type="bahis" data-placeholder="İsim Soyisim" data-btn="Sorgula"><i class="fa-solid fa-dice"></i> Bahis Sorgu</div>
+        <div class="menu-item" data-type="exxengen" data-placeholder="Boş bırakın" data-btn="Sorgula"><i class="fa-solid fa-tv"></i> Exxen Gen</div>
+        <div class="menu-item" data-type="fakeNitro" data-placeholder="Adet (Örn: 5)" data-btn="Sorgula"><i class="fa-brands fa-discord"></i> Fake Nitro</div>
+        <div class="menu-item" data-type="plaka" data-placeholder="Plaka (Örn: 34ABC34)" data-btn="Sorgula"><i class="fa-solid fa-car"></i> Plaka Sorgu</div>
+        <div class="menu-item" data-type="predunyam" data-placeholder="Boş bırakın" data-btn="Sorgula"><i class="fa-solid fa-gamepad"></i> Predunyam</div>
+        <div class="menu-item" data-type="ua" data-placeholder="Boş bırakın" data-btn="Sorgula"><i class="fa-solid fa-user-secret"></i> User-Agent</div>
+
+        <div class="menu-category">Diğer</div>
+        <div class="menu-item" data-type="discord" data-placeholder="Discord ID" data-btn="Sorgula"><i class="fa-brands fa-discord"></i> Discord ID</div>
+        <div class="menu-item" data-type="smsbomber" data-placeholder="Telefon Numarası (Örn: 5551234567)" data-btn="Gönder"><i class="fa-solid fa-bomb"></i> SMS Bomber</div>
+    </div>
+
+    <div class="main">
+        <div class="header-title" id="pageTitle"><i class="fa-solid fa-id-card"></i> TC Sorgulama</div>
+
+        <div class="search-container">
+            <div class="search-box" id="smsOptions" style="display: none;">
+                <div class="input-wrapper" style="flex: 0.3;">
+                    <i class="fa-solid fa-hashtag"></i>
+                    <input type="number" id="smsCount" min="1" max="10" value="1" placeholder="Adet">
+                </div>
+                <div class="input-wrapper" style="flex: 0.7;">
+                    <i class="fa-solid fa-sliders"></i>
+                    <select id="smsMode">
+                        <option value="normal">Normal</option>
+                        <option value="turbo" selected>Turbo (Hızlı)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-keyboard"></i>
+                    <input type="text" id="queryInput" placeholder="TC Kimlik No (11 Hane)">
+                </div>
+                <button id="searchBtn" onclick="sorgula()"><i class="fa-solid fa-magnifying-glass"></i> Sorgula</button>
+            </div>
+            <div class="progress-bar" id="progressBar"><div class="progress-bar-inner" id="progressInner"></div></div>
+        </div>
+
+        <div class="result-container" id="resultBox"></div>
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+    </div>
+
+    <script>
+        const snowContainer = document.getElementById('snow-container');
+        for (let i = 0; i < 60; i++) {
+            const snowflake = document.createElement('div');
+            snowflake.className = 'snowflake';
+            snowflake.innerHTML = '❄';
+            snowflake.style.left = Math.random() * 100 + 'vw';
+            snowflake.style.animationDuration = (Math.random() * 5 + 4) + 's';
+            snowflake.style.animationDelay = (Math.random() * 5) + 's';
+            snowflake.style.opacity = Math.random() * 0.5 + 0.2;
+            snowflake.style.fontSize = (Math.random() * 12 + 6) + 'px';
+            snowContainer.appendChild(snowflake);
+        }
+
+        let currentType = "tc";
+        let currentBtnText = "Sorgula";
+
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                currentType = this.getAttribute('data-type');
+                currentBtnText = this.getAttribute('data-btn');
+                document.getElementById('pageTitle').innerHTML = this.innerHTML;
+                document.getElementById('queryInput').placeholder = this.getAttribute('data-placeholder');
+                document.getElementById('queryInput').value = "";
+                document.getElementById('resultBox').classList.remove('active');
+                document.getElementById('errorMsg').innerText = "";
+                document.getElementById('successMsg').innerText = "";
+                document.getElementById('progressBar').classList.remove('active');
+                document.getElementById('searchBtn').innerHTML =
+                    `<i class="fa-solid ${currentType === 'smsbomber' ? 'fa-paper-plane' : 'fa-magnifying-glass'}"></i> ${currentBtnText}`;
+                if (currentType === 'smsbomber') {
+                    document.getElementById('smsOptions').style.display = 'flex';
+                    document.getElementById('queryInput').placeholder = "Telefon Numarası (Örn: 5551234567)";
+                } else {
+                    document.getElementById('smsOptions').style.display = 'none';
+                }
+            });
+        });
+
+        async function pollJob(jobId, btn) {
+            const progressBar = document.getElementById('progressBar');
+            const progressInner = document.getElementById('progressInner');
+            const resultBox = document.getElementById('resultBox');
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            progressBar.classList.add('active');
+            let progress = 0;
+            const timer = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/sms/status?job_id=${jobId}`);
+                    const data = await res.json();
+                    if (data.status === 'running') {
+                        progress = Math.min(progress + 5, 90);
+                        progressInner.style.width = progress + '%';
+                        return;
+                    }
+                    clearInterval(timer);
+                    progressInner.style.width = '100%';
+                    setTimeout(() => {
+                        progressBar.classList.remove('active');
+                        progressInner.style.width = '0%';
+                    }, 500);
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> ${currentBtnText}`;
+                    if (data.status === 'done') {
+                        resultBox.innerText = JSON.stringify(data.result, null, 4);
+                        resultBox.classList.add('active');
+                        if (data.source) successMsg.innerText = `Kaynak: ${data.source}`;
+                    } else {
+                        errorMsg.innerText = `Hata: ${data.error}`;
+                    }
+                } catch (e) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> ${currentBtnText}`;
+                    errorMsg.innerText = `Durum sorgusu hatası: ${e.message}`;
+                }
+            }, 800);
+        }
+
+        async function sorgula() {
+            const inputVal = document.getElementById('queryInput').value.trim();
+            const btn = document.getElementById('searchBtn');
+            const resultBox = document.getElementById('resultBox');
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            const emptyAllowed = ['ccgen', 'exxengen', 'predunyam', 'ua'];
+            if (!inputVal && !emptyAllowed.includes(currentType)) {
+                errorMsg.innerText = "Lütfen bir değer girin.";
+                return;
+            }
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> İşleniyor...`;
+            errorMsg.innerText = ""; successMsg.innerText = "";
+            resultBox.classList.remove('active');
+
+            if (currentType === 'smsbomber') {
+                const count = document.getElementById('smsCount').value;
+                const mode = document.getElementById('smsMode').value;
+                try {
+                    const response = await fetch(`/api?type=smsbomber&query=${encodeURIComponent(inputVal)}&count=${count}&mode=${mode}`);
+                    const data = await response.json();
+                    if (data.error) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> ${currentBtnText}`;
+                        errorMsg.innerText = `Hata: ${data.error}`;
+                        return;
+                    }
+                    await pollJob(data.job_id, btn);
+                } catch (error) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> ${currentBtnText}`;
+                    errorMsg.innerText = `Sunucu Hatası: ${error.message}`;
+                }
+                return;
+            }
+
+            let url = `/api?type=${currentType}&query=${encodeURIComponent(inputVal)}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.error) {
+                    errorMsg.innerText = `Hata: ${data.error}`;
+                } else {
+                    resultBox.innerText = JSON.stringify(data.result, null, 4);
+                    resultBox.classList.add('active');
+                    if (data.source) successMsg.innerText = `Kaynak: ${data.source}`;
+                }
+            } catch (error) {
+                errorMsg.innerText = `Sunucu Hatası: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> ${currentBtnText}`;
+            }
+        }
+    </script>
+</body>
+</html>
