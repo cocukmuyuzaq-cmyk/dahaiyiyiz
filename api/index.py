@@ -37,9 +37,8 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('logged_in'):
-            # EĞER İSTEK API'YE GELİYORSA HTML YÖNLENDİRMESİ YAPMA, JSON HATASI DÖN!
             if request.path.startswith('/api'):
-                return jsonify({"error": "Oturum süreniz dolmuş veya giriş yapmamışsınız. Lütfen sayfayı yenileyip tekrar giriş yapın."}), 401
+                return jsonify({"error": "Oturum süreniz dolmuş. Lütfen sayfayı yenileyin."}), 401
             return redirect('/login')
         return f(*args, **kwargs)
     return decorated
@@ -62,7 +61,7 @@ def login():
     if request.method == 'POST':
         if check_auth(request.form.get('username', ''), request.form.get('password', '')):
             session['logged_in'] = True
-            session.permanent = True # Oturumun kalıcı olmasını sağlar
+            session.permanent = True
             return redirect('/')
         return LOGIN_HTML.replace('{% if error %}<div class="error">{{ error }}</div>{% endif %}', '<div class="error">Hatali giris</div>')
     return LOGIN_HTML.replace('{% if error %}<div class="error">{{ error }}</div>{% endif %}', '')
@@ -219,7 +218,10 @@ def api():
     except Exception as e:
         return jsonify({"error": f"Bağlantı hatası: {str(e)}"}), 500
 
-# Local test için
+
+# ==================== PORT VE SUNUCU BAŞLATMA (RENDER İÇİN KRİTİK) ====================
 if __name__ == '__main__':
-    print("Sunucu Baslatiliyor... http://127.0.0.1:5000")
-    app.run(port=5000, threaded=True, debug=True)
+    # Render'ın beklediği port (varsayılan 10000) ve adres (0.0.0.0)
+    port = int(os.environ.get("PORT", 5000))
+    print(f"Sunucu Baslatiliyor... Port: {port}")
+    app.run(host='0.0.0.0', port=port)
