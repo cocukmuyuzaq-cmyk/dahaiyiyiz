@@ -5,6 +5,7 @@ import random
 import threading
 import uuid
 import urllib3
+import os
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -264,5 +265,7 @@ def api():
     except Exception as e:
         return jsonify({"error": f"Bağlantı hatası: {str(e)}"}), 500
 
+# ==================== RENDER İÇİN DOĞRU ÇALIŞTIRMA ====================
 if __name__ == '__main__':
-    app.run(port=5000, threaded=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, threaded=True)
