@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import requests
 import asyncio
 import random
@@ -40,7 +40,6 @@ USER_PROXIES = [
     {"ip": "23.26.71.145", "port": "5628", "user": "bgnozpqj", "pass": "f8uanljtufcb"}
 ]
 
-# ==================== SMS BOMBER İŞ HAVUZU ====================
 SMS_JOBS = {}
 SMS_LOCK = threading.Lock()
 
@@ -122,6 +121,16 @@ def _sms_worker(job_id, phone, count, mode):
         with SMS_LOCK:
             SMS_JOBS[job_id] = {"status": "error", "error": f"SMS Bomber Hatası: {str(e)}"}
 
+# ==================== ANA SAYFA ====================
+@app.route('/')
+def home():
+    # index.html'i sun (api/index.py'nin bir üst dizininde)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    index_path = os.path.join(base_dir, 'index.html')
+    if os.path.exists(index_path):
+        return send_file(index_path)
+    return jsonify({"status": "ok", "message": "ZENIX API çalışıyor. index.html bulunamadı."})
+
 @app.route('/api/sms/status')
 def sms_status():
     job_id = request.args.get('job_id')
@@ -140,7 +149,6 @@ def api():
     if not query_type:
         return jsonify({"error": "Eksik parametre"}), 400
 
-    # ==================== SMS BOMBER ====================
     if query_type == "smsbomber":
         if SmsBomber is None:
             return jsonify({"error": "smsapi.py bulunamadı."}), 500
@@ -156,7 +164,6 @@ def api():
     target_url = ""
     source_name = ""
 
-    # ==================== PANELABI ====================
     if query_type in ["tc", "tcpro", "aile", "sulale", "adres", "isyeri", "sgk"]:
         target_url = f"{PANELABI}/{query_type if query_type != 'tcpro' else 'tcsorgupro'}.php?tc={query_val}"
         source_name = "PanelAbi"
@@ -182,13 +189,9 @@ def api():
         if len(parts) < 3: return jsonify({"error": "Ad, İl ve İlçe arasında boşluk bırakın."}), 400
         target_url = f"{PANELABI}/adililce.php?ad={parts[0]}&il={parts[1]}&ilce={' '.join(parts[2:])}"
         source_name = "PanelAbi"
-
-    # ==================== SOLIDARK (Vesika) ====================
     elif query_type == "vesika":
         target_url = f"{SOLIDARK}/vesika.php?tc={query_val}"
         source_name = "Solidark"
-
-    # ==================== WAZELY (Genel) ====================
     elif query_type == "trlog":
         target_url = f"{WAZELY}/trlog?site={query_val}"
         source_name = "Wazely"
@@ -222,8 +225,6 @@ def api():
     elif query_type == "ua":
         target_url = f"{WAZELY}/randomuseragent"
         source_name = "Wazely"
-
-    # ==================== WAZELY API (Özel) ====================
     elif query_type == "bedrock":
         target_url = f"{WAZELY_API}/bedrock?adres={query_val}"
         source_name = "WazelyAPI"
@@ -239,33 +240,26 @@ def api():
     elif query_type == "tgtokencheck":
         target_url = f"{WAZELY_API}/tgtokencheck?token={query_val}"
         source_name = "WazelyAPI"
-
-    # ==================== ID API ====================
     elif query_type == "discord":
         target_url = f"{ID_API}?id={query_val}"
         source_name = "ID API"
-
     else:
         return jsonify({"error": "Geçersiz sorgu tipi"}), 400
 
-    # ==================== İSTEK AT ====================
     try:
         response, proxy_source = proxy_request(target_url)
         if response is None:
             return jsonify({"error": "API'ye ulaşılamadı. Proxy'ler ve doğrudan bağlantı başarısız."}), 500
-
         try:
             data = response.json()
         except Exception:
             data = response.text
-
         data = clean_data(data)
         final_source = f"{source_name} ({proxy_source})" if proxy_source else source_name
         return jsonify({"result": data, "source": final_source})
     except Exception as e:
         return jsonify({"error": f"Bağlantı hatası: {str(e)}"}), 500
 
-# ==================== RENDER İÇİN DOĞRU ÇALIŞTIRMA ====================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, threaded=True)
